@@ -1,5 +1,4 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_PATH = "/api";
 
 const TOKEN_KEY = "dondecomo:admin-token";
 
@@ -33,7 +32,7 @@ export async function apiFetch(path, options = {}) {
   let response;
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${API_PATH}${path}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",

@@ -18,6 +18,9 @@ Panel general en Next.js, JavaScript y Tailwind CSS conectado exclusivamente a l
 1. API funcionando con MongoDB Atlas.
 2. Base preparada con `npm run bootstrap` en `../api`.
 3. Cuenta administradora creada desde `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `api/.env`.
+4. `API_URL` apuntando a la URL base del API, incluyendo `/api`.
+
+En Vercel configura `API_URL` como variable de entorno (sin prefijo `NEXT_PUBLIC_`) y vuelve a desplegar. Next.js la usa en un rewrite del servidor; el navegador solo llama al mismo dominio del panel mediante `/api`.
 
 ## Ejecutar
 
