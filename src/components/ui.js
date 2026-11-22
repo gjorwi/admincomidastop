@@ -147,7 +147,7 @@ export function Modal({ title, description, children, onClose, size = "default" 
   const widthClass = size === "wide" ? "max-w-2xl" : "max-w-lg";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/50 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur-sm">
       <div className={`max-h-[92dvh] w-full ${widthClass} overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl sm:p-6`}>
         <div className="flex items-start justify-between gap-3">
           <div>
