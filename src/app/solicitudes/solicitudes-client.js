@@ -56,11 +56,11 @@ export default function RequestsClient() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [credentials, setCredentials] = useState(null);
+  const [detailRequest, setDetailRequest] = useState(null);
   const { data: detailData, error: detailError, isLoading: detailLoading } = useSWR(
     detailRequest ? `/admin/requests/${detailRequest.id}` : null,
     apiFetch,
   );
-  const [detailRequest, setDetailRequest] = useState(null);
 
   const requests = data?.requests || [];
   const categories = useMemo(
