@@ -7,6 +7,7 @@ import {
   Inbox,
   LayoutDashboard,
   LogOut,
+  Settings2,
   Store,
   Trophy,
   Users,
@@ -113,12 +114,34 @@ export function AppShell({ children }) {
                 </Link>
               );
             })}
+            <Link
+              href="/configuracion"
+              className={`flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${
+                isActive(pathname, "/configuracion")
+                  ? "bg-accent text-white"
+                  : "text-muted hover:bg-beige hover:text-ink"
+              }`}
+            >
+              <Settings2 className="h-[18px] w-[18px]" aria-hidden="true" />
+              Configuración
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
             <span className="hidden max-w-[180px] truncate text-xs font-medium text-muted sm:block">
               {user.name}
             </span>
+            <Link
+              href="/configuracion"
+              aria-label="Abrir configuración"
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition lg:hidden ${
+                isActive(pathname, "/configuracion")
+                  ? "bg-accent text-white"
+                  : "text-muted hover:bg-beige hover:text-ink"
+              }`}
+            >
+              <Settings2 className="h-4 w-4" aria-hidden="true" />
+            </Link>
             <button
               type="button"
               onClick={logout}

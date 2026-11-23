@@ -9,6 +9,7 @@ Panel general en Next.js, JavaScript y Tailwind CSS conectado exclusivamente a l
 - Creación automática de la cuenta de negocio al aprobar una solicitud.
 - Control de estado, verificación, suspensión y premium de negocios.
 - Administración de usuarios.
+- Configuración del radio de validación de los escaneos QR.
 - Publicación mensual de rankings y reconocimientos.
 - Visualización de capturas históricas.
 - Sin datos de demostración ni acciones simuladas.
