@@ -1,20 +1,65 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { BadgeCheck, Crown, MapPin, Star, Store } from "lucide-react";
+import { BadgeCheck, Crown, MapPin, Search, Star, Store } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Button, Pill, SectionTitle } from "@/components/ui";
 
+const statusFilters = [
+  { id: "todos", label: "Todos" },
+  { id: "approved", label: "Aprobados" },
+  { id: "pending", label: "Pendientes" },
+  { id: "suspended", label: "Suspendidos" },
+  { id: "rejected", label: "Rechazados" },
+];
+
 function statusTone(status) {
   if (status === "approved") return "open";
-  if (status === "suspended") return "red";
+  if (status === "suspended" || status === "rejected") return "red";
   return "amber";
+}
+
+function statusLabel(status) {
+  if (status === "approved") return "Aprobado";
+  if (status === "suspended") return "Suspendido";
+  if (status === "rejected") return "Rechazado";
+  return "Pendiente";
+}
+
+function normalize(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 export default function BusinessesClient() {
   const { mutate } = useSWRConfig();
   const { data, error } = useSWR("/admin/businesses", apiFetch);
-  const businesses = data?.businesses || [];
+  const businesses = useMemo(() => data?.businesses || [], [data]);
+  const [status, setStatus] = useState("todos");
+  const [query, setQuery] = useState("");
+
+  const filteredBusinesses = useMemo(() => {
+    const term = normalize(query.trim());
+    return businesses.filter((business) => {
+      if (status !== "todos" && business.status !== status) return false;
+      if (!term) return true;
+      const haystack = normalize(
+        [
+          business.name,
+          business.category,
+          business.zone,
+          business.municipality,
+          business.parish,
+          business.sector,
+          business.address,
+        ].join(" "),
+      );
+      return haystack.includes(term);
+    });
+  }, [businesses, query, status]);
 
   const updateBusiness = async (business, changes) => {
     await apiFetch(`/admin/businesses/${business._id}`, {
@@ -40,7 +85,7 @@ export default function BusinessesClient() {
 
       <SectionTitle
         title="Establecimientos"
-        description={`${businesses.length} registrados`}
+        description={`${filteredBusinesses.length} de ${businesses.length} registrados`}
       />
 
       {error ? (
@@ -49,8 +94,49 @@ export default function BusinessesClient() {
         </div>
       ) : null}
 
+      <div className="mb-4 space-y-3">
+        <label className="flex min-h-12 items-center gap-2 rounded-2xl border border-line bg-white px-4 shadow-sm">
+          <Search className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar por nombre, categoría o zona"
+            aria-label="Buscar negocios"
+            className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
+          />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="px-1 text-lg leading-none text-muted hover:text-ink"
+              aria-label="Limpiar búsqueda"
+            >
+              ×
+            </button>
+          ) : null}
+        </label>
+
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+          {statusFilters.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setStatus(filter.id)}
+              aria-pressed={status === filter.id}
+              className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition ${
+                status === filter.id
+                  ? "bg-ink text-white"
+                  : "bg-beige text-ink hover:bg-[#ebe0d4]"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-2">
-        {businesses.map((business) => (
+        {filteredBusinesses.map((business) => (
           <article
             key={business._id}
             className="rounded-[24px] border border-line/70 bg-white/70 p-4 shadow-sm"
@@ -84,11 +170,7 @@ export default function BusinessesClient() {
                 </p>
               </div>
               <Pill tone={statusTone(business.status)}>
-                {business.status === "approved"
-                  ? "Aprobado"
-                  : business.status === "suspended"
-                    ? "Suspendido"
-                    : "Pendiente"}
+                {statusLabel(business.status)}
               </Pill>
             </div>
 
@@ -168,9 +250,11 @@ export default function BusinessesClient() {
         ))}
       </div>
 
-      {!businesses.length && !error ? (
+      {!filteredBusinesses.length && !error ? (
         <div className="rounded-[24px] bg-soft p-6 text-center text-sm text-muted">
-          No hay negocios registrados.
+          {businesses.length
+            ? "No hay negocios que coincidan con el filtro."
+            : "No hay negocios registrados."}
         </div>
       ) : null}
 

@@ -353,7 +353,7 @@ export default function RequestsClient() {
                   <p className="mt-1 text-xs text-muted">Categoría declarada: {requestDetail.categoryOther}</p>
                 ) : null}
                 <p className="mt-1 text-xs text-muted">
-                  Domicilio: {requestDetail.hasDelivery ? "Sí" : "No"}
+                  Delivery: {requestDetail.hasDelivery ? "Sí" : "No"}
                 </p>
               </div>
               <div className="rounded-2xl bg-soft p-4">
