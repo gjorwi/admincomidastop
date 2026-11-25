@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Star,
   Store,
+  UserRound,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
@@ -159,7 +160,7 @@ export default function AdminDashboardClient() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="flex items-center gap-3 rounded-[24px] bg-white p-4 shadow-sm">
           <Users className="h-5 w-5 text-accent" />
           <div>
@@ -167,6 +168,15 @@ export default function AdminDashboardClient() {
               {stats.users ?? 0}
             </p>
             <p className="text-[11px] text-muted">cuentas registradas</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-[24px] bg-white p-4 shadow-sm">
+          <UserRound className="h-5 w-5 text-open" />
+          <div>
+            <p className="font-display text-2xl text-ink">
+              {stats.clients ?? 0}
+            </p>
+            <p className="text-[11px] text-muted">clientes registrados</p>
           </div>
         </div>
         <div className="flex items-center gap-3 rounded-[24px] bg-white p-4 shadow-sm">

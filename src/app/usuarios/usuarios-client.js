@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import {
   Building2,
   CalendarDays,
   KeyRound,
   Mail,
+  Search,
   ShieldCheck,
   UserPlus,
   UserRound,
@@ -18,10 +19,22 @@ import {
   Field,
   Modal,
   Pill,
-  SectionTitle,
 } from "@/components/ui";
 
 const emptyForm = { name: "", email: "", password: "" };
+
+const STATUS_OPTIONS = [
+  { value: "todos", label: "Todos los estados" },
+  { value: "active", label: "Activos" },
+  { value: "suspended", label: "Suspendidos" },
+  { value: "pending", label: "Pendientes" },
+];
+
+const ADMIN_ROLE_OPTIONS = [
+  { value: "todos", label: "Todos los tipos" },
+  { value: "admin", label: "Administradores" },
+  { value: "business", label: "Negocios" },
+];
 
 function formatDate(value) {
   if (!value) return "No registrado";
@@ -34,13 +47,211 @@ function formatDate(value) {
 }
 
 function roleLabel(role) {
-  return role === "admin" ? "Administrador" : "Cuenta de negocio";
+  if (role === "admin") return "Administrador";
+  if (role === "business") return "Cuenta de negocio";
+  if (role === "client") return "Cliente";
+  return "Usuario";
+}
+
+function roleShortLabel(role) {
+  if (role === "admin") return "Admin";
+  if (role === "business") return "Negocio";
+  if (role === "client") return "Cliente";
+  return "Usuario";
+}
+
+function roleTone(role) {
+  if (role === "admin") return "accent";
+  if (role === "client") return "dark";
+  return "beige";
+}
+
+function statusLabel(status) {
+  if (status === "active") return "Activo";
+  if (status === "suspended") return "Suspendido";
+  if (status === "pending") return "Pendiente";
+  return status;
+}
+
+function statusTone(status) {
+  if (status === "active") return "open";
+  if (status === "pending") return "amber";
+  return "red";
+}
+
+function filterUsers(users, { query, role = "todos", status = "todos" }) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return users.filter((user) => {
+    if (role !== "todos" && user.role !== role) return false;
+    if (status !== "todos" && user.status !== status) return false;
+    if (!normalizedQuery) return true;
+
+    const text = `${user.name} ${user.email} ${user.businessName || ""}`
+      .toLowerCase()
+      .trim();
+    return text.includes(normalizedQuery);
+  });
+}
+
+function RoleIcon({ role }) {
+  if (role === "admin") return <ShieldCheck className="h-5 w-5" />;
+  if (role === "business") return <Building2 className="h-5 w-5" />;
+  return <UserRound className="h-5 w-5" />;
+}
+
+function ToolbarSelect({ label, value, onChange, options }) {
+  return (
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      aria-label={label}
+      className="min-h-11 rounded-full border border-line bg-white px-4 text-sm font-semibold text-ink outline-none transition focus:border-accent/60"
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function UserToolbar({
+  query,
+  onQueryChange,
+  role,
+  onRoleChange,
+  status,
+  onStatusChange,
+  placeholder,
+}) {
+  return (
+    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+      <label className="relative min-w-0 flex-1">
+        <Search
+          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          placeholder={placeholder}
+          aria-label={placeholder}
+          className="min-h-11 w-full rounded-full border border-line bg-white pl-11 pr-4 text-sm text-ink outline-none transition placeholder:text-muted focus:border-accent/60"
+        />
+      </label>
+
+      {onRoleChange ? (
+        <ToolbarSelect
+          label="Filtrar por tipo de cuenta"
+          value={role}
+          onChange={onRoleChange}
+          options={ADMIN_ROLE_OPTIONS}
+        />
+      ) : null}
+
+      <ToolbarSelect
+        label="Filtrar por estado"
+        value={status}
+        onChange={onStatusChange}
+        options={STATUS_OPTIONS}
+      />
+    </div>
+  );
+}
+
+function UserRow({ user, index, onSelect, onToggleStatus }) {
+  const iconTone =
+    user.role === "admin"
+      ? "bg-accent-tint text-accent"
+      : user.role === "business"
+        ? "bg-beige text-ink"
+        : "bg-soft text-muted";
+
+  return (
+    <div
+      className={`flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center ${
+        index > 0 ? "border-t border-line" : ""
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => onSelect(user)}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        aria-label={`Ver detalle de ${user.name}`}
+      >
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${iconTone}`}
+        >
+          <RoleIcon role={user.role} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-ink">
+            {user.name}
+          </span>
+          <span className="block truncate text-xs text-muted">
+            {user.email}
+          </span>
+        </span>
+        <span className="shrink-0 text-[11px] font-semibold text-accent sm:hidden">
+          Ver
+        </span>
+      </button>
+
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+        <Pill tone={roleTone(user.role)}>{roleShortLabel(user.role)}</Pill>
+        <Pill tone={statusTone(user.status)}>
+          {statusLabel(user.status)}
+        </Pill>
+        <Button
+          type="button"
+          variant={user.status === "active" ? "danger" : "secondary"}
+          onClick={() => onToggleStatus(user)}
+        >
+          {user.status === "active" ? "Suspender" : "Activar"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function UserList({
+  users,
+  total,
+  emptyMessage,
+  noMatchMessage,
+  onSelect,
+  onToggleStatus,
+}) {
+  if (!users.length) {
+    return (
+      <div className="mt-3 rounded-[24px] bg-soft p-6 text-center text-sm text-muted">
+        {total === 0 ? emptyMessage : noMatchMessage}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-[24px] border border-line/70 bg-white/70 shadow-sm">
+      {users.map((user, index) => (
+        <UserRow
+          key={user.id}
+          user={user}
+          index={index}
+          onSelect={onSelect}
+          onToggleStatus={onToggleStatus}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function UsersClient() {
   const { mutate } = useSWRConfig();
   const { data, error } = useSWR("/admin/users", apiFetch);
-  const users = data?.users || [];
+  const users = useMemo(() => data?.users || [], [data]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
@@ -52,6 +263,41 @@ export default function UsersClient() {
   const [resetError, setResetError] = useState("");
   const [resetSaving, setResetSaving] = useState(false);
   const [resetCredentials, setResetCredentials] = useState(null);
+  const [activeTab, setActiveTab] = useState("staff");
+  const [adminQuery, setAdminQuery] = useState("");
+  const [adminRole, setAdminRole] = useState("todos");
+  const [adminStatus, setAdminStatus] = useState("todos");
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientStatus, setClientStatus] = useState("todos");
+
+  const adminUsers = useMemo(
+    () =>
+      users.filter(
+        (user) => user.role === "admin" || user.role === "business",
+      ),
+    [users],
+  );
+  const clientUsers = useMemo(
+    () => users.filter((user) => user.role === "client"),
+    [users],
+  );
+  const filteredAdminUsers = useMemo(
+    () =>
+      filterUsers(adminUsers, {
+        query: adminQuery,
+        role: adminRole,
+        status: adminStatus,
+      }),
+    [adminQuery, adminRole, adminStatus, adminUsers],
+  );
+  const filteredClientUsers = useMemo(
+    () =>
+      filterUsers(clientUsers, {
+        query: clientQuery,
+        status: clientStatus,
+      }),
+    [clientQuery, clientStatus, clientUsers],
+  );
 
   const toggleStatus = async (user) => {
     const nextStatus = user.status === "active" ? "suspended" : "active";
@@ -141,6 +387,14 @@ export default function UsersClient() {
     }
   };
 
+  const handleTabKeyDown = (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const nextTab = activeTab === "staff" ? "clients" : "staff";
+    setActiveTab(nextTab);
+    event.currentTarget.querySelector(`#tab-${nextTab}`)?.focus();
+  };
+
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
@@ -150,87 +404,135 @@ export default function UsersClient() {
         Usuarios
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-        Administra las cuentas de administración. Las cuentas de negocio se
-        crean automáticamente al aprobar una solicitud.
+        Gestiona las cuentas de administración, negocios y clientes. Las cuentas
+        de negocio se crean al aprobar una solicitud.
       </p>
 
       <ErrorNotice error={error} className="mt-5" />
 
-      <div className="mt-5 flex justify-end">
-        <Button type="button" onClick={openForm}>
-          <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Nuevo administrador
-        </Button>
-      </div>
-
-      <SectionTitle
-        title="Cuentas"
-        description={`${users.length} registradas`}
-      />
-
-      <div className="overflow-hidden rounded-[24px] border border-line/70 bg-white/70 shadow-sm">
-        {users.map((user, index) => (
-          <div
-            key={user.id}
-            className={`flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center ${
-              index > 0 ? "border-t border-line" : ""
+      <div
+        role="tablist"
+        aria-label="Tipo de usuario"
+        onKeyDown={handleTabKeyDown}
+        className="mt-5 flex flex-wrap gap-2"
+      >
+        <button
+          id="tab-staff"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "staff"}
+          aria-controls="panel-staff"
+          tabIndex={activeTab === "staff" ? 0 : -1}
+          onClick={() => setActiveTab("staff")}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${
+            activeTab === "staff"
+              ? "bg-ink text-white"
+              : "bg-beige text-ink hover:bg-[#ebe0d4]"
+          }`}
+        >
+          <span className="sm:hidden">Admin y negocios</span>
+          <span className="hidden sm:inline">Administradores y negocios</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] ${
+              activeTab === "staff"
+                ? "bg-white/15 text-white"
+                : "bg-white/70 text-ink"
             }`}
           >
-            <button
-              type="button"
-              onClick={() => setSelectedUser(user)}
-              className="flex min-w-0 flex-1 items-center gap-3 text-left"
-              aria-label={`Ver detalle de ${user.name}`}
-            >
-              <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                  user.role === "admin"
-                    ? "bg-accent-tint text-accent"
-                    : "bg-beige text-ink"
-                }`}
-              >
-                {user.role === "admin" ? (
-                  <ShieldCheck className="h-5 w-5" />
-                ) : (
-                  <UserRound className="h-5 w-5" />
-                )}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-ink">
-                  {user.name}
-                </span>
-                <span className="block truncate text-xs text-muted">
-                  {user.email}
-                </span>
-              </span>
-              <span className="shrink-0 text-[11px] font-semibold text-accent sm:hidden">
-                Ver
-              </span>
-            </button>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-              <Pill tone={user.role === "admin" ? "accent" : "beige"}>
-                {user.role === "admin" ? "Admin" : "Negocio"}
-              </Pill>
-              <Pill tone={user.status === "active" ? "open" : "red"}>
-                {user.status === "active" ? "Activo" : "Suspendido"}
-              </Pill>
-              <Button
-                type="button"
-                variant={user.status === "active" ? "danger" : "secondary"}
-                onClick={() => toggleStatus(user)}
-              >
-                {user.status === "active" ? "Suspender" : "Activar"}
-              </Button>
-            </div>
-          </div>
-        ))}
+            {adminUsers.length}
+          </span>
+        </button>
+
+        <button
+          id="tab-clients"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "clients"}
+          aria-controls="panel-clients"
+          tabIndex={activeTab === "clients" ? 0 : -1}
+          onClick={() => setActiveTab("clients")}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${
+            activeTab === "clients"
+              ? "bg-ink text-white"
+              : "bg-beige text-ink hover:bg-[#ebe0d4]"
+          }`}
+        >
+          Clientes
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] ${
+              activeTab === "clients"
+                ? "bg-white/15 text-white"
+                : "bg-white/70 text-ink"
+            }`}
+          >
+            {clientUsers.length}
+          </span>
+        </button>
       </div>
 
-      {!users.length && !error ? (
-        <div className="rounded-[24px] bg-soft p-6 text-center text-sm text-muted">
-          No hay usuarios registrados.
+      {activeTab === "staff" ? (
+        <div
+          id="panel-staff"
+          role="tabpanel"
+          aria-labelledby="tab-staff"
+          className="mt-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              {filteredAdminUsers.length} de {adminUsers.length} cuentas
+            </p>
+            <Button type="button" onClick={openForm}>
+              <UserPlus className="h-4 w-4" aria-hidden="true" />
+              Nuevo administrador
+            </Button>
+          </div>
+
+          <UserToolbar
+            query={adminQuery}
+            onQueryChange={setAdminQuery}
+            role={adminRole}
+            onRoleChange={setAdminRole}
+            status={adminStatus}
+            onStatusChange={setAdminStatus}
+            placeholder="Buscar admin, negocio o correo"
+          />
+          <UserList
+            users={filteredAdminUsers}
+            total={adminUsers.length}
+            emptyMessage="No hay cuentas de administración ni negocios registrados."
+            noMatchMessage="No hay cuentas que coincidan con la búsqueda o los filtros."
+            onSelect={setSelectedUser}
+            onToggleStatus={toggleStatus}
+          />
         </div>
-      ) : null}
+      ) : (
+        <div
+          id="panel-clients"
+          role="tabpanel"
+          aria-labelledby="tab-clients"
+          className="mt-4"
+        >
+          <p className="text-sm text-muted">
+            {filteredClientUsers.length} de {clientUsers.length} clientes
+          </p>
+
+          <UserToolbar
+            query={clientQuery}
+            onQueryChange={setClientQuery}
+            status={clientStatus}
+            onStatusChange={setClientStatus}
+            placeholder="Buscar cliente por nombre o correo"
+          />
+          <UserList
+            users={filteredClientUsers}
+            total={clientUsers.length}
+            emptyMessage="Aún no hay usuarios clientes registrados."
+            noMatchMessage="No hay clientes que coincidan con la búsqueda o los filtros."
+            onSelect={setSelectedUser}
+            onToggleStatus={toggleStatus}
+          />
+        </div>
+      )}
 
       {selectedUser ? (
         <Modal
@@ -240,11 +542,11 @@ export default function UsersClient() {
         >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              <Pill tone={selectedUser.role === "admin" ? "accent" : "beige"}>
+              <Pill tone={roleTone(selectedUser.role)}>
                 {roleLabel(selectedUser.role)}
               </Pill>
-              <Pill tone={selectedUser.status === "active" ? "open" : "red"}>
-                {selectedUser.status === "active" ? "Activo" : "Suspendido"}
+              <Pill tone={statusTone(selectedUser.status)}>
+                {statusLabel(selectedUser.status)}
               </Pill>
             </div>
 
