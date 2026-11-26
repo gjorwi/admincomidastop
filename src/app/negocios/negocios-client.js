@@ -2,9 +2,22 @@
 
 import { useMemo, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { BadgeCheck, Crown, MapPin, Search, Star, Store } from "lucide-react";
+import {
+  BadgeCheck,
+  Crown,
+  Eye,
+  MapPin,
+  MessageCircle,
+  Navigation,
+  Phone,
+  Search,
+  Share2,
+  Star,
+  Store,
+  UtensilsCrossed,
+} from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { Button, Pill, SectionTitle } from "@/components/ui";
+import { Button, Modal, Pill, SectionTitle } from "@/components/ui";
 
 const statusFilters = [
   { id: "todos", label: "Todos" },
@@ -34,12 +47,36 @@ function normalize(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function MetricCard({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-2xl bg-soft p-3">
+      <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
+      <p className="mt-2 font-display text-2xl leading-none text-ink">
+        {value ?? 0}
+      </p>
+      <p className="mt-1 text-[10px] leading-4 text-muted">{label}</p>
+    </div>
+  );
+}
+
 export default function BusinessesClient() {
   const { mutate } = useSWRConfig();
   const { data, error } = useSWR("/admin/businesses", apiFetch);
   const businesses = useMemo(() => data?.businesses || [], [data]);
   const [status, setStatus] = useState("todos");
   const [query, setQuery] = useState("");
+  const [metricsBusiness, setMetricsBusiness] = useState(null);
+  const [metricsRange, setMetricsRange] = useState(30);
+  const {
+    data: metricsData,
+    error: metricsError,
+    isLoading: metricsLoading,
+  } = useSWR(
+    metricsBusiness
+      ? `/admin/businesses/${metricsBusiness._id}/metrics?range=${metricsRange}`
+      : null,
+    apiFetch,
+  );
 
   const filteredBusinesses = useMemo(() => {
     const term = normalize(query.trim());
@@ -220,6 +257,17 @@ export default function BusinessesClient() {
               <Button
                 type="button"
                 variant="outline"
+                onClick={() => {
+                  setMetricsRange(30);
+                  setMetricsBusiness(business);
+                }}
+              >
+                <Eye className="h-4 w-4" aria-hidden="true" />
+                Ver métricas
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() =>
                   updateBusiness(business, {
                     premiumPlan:
@@ -263,6 +311,143 @@ export default function BusinessesClient() {
         La verificación confirma los datos del local; no modifica su puntuación
         ni su posición en los rankings.
       </div>
+
+      {metricsBusiness ? (
+        <Modal
+          title={`Métricas de ${metricsBusiness.name}`}
+          description="Actividad registrada desde la web de clientes."
+          onClose={() => setMetricsBusiness(null)}
+          size="wide"
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Pill
+                  tone={
+                    metricsBusiness.premiumPlan === "premium"
+                      ? "amber"
+                      : "beige"
+                  }
+                >
+                  {metricsBusiness.premiumPlan === "premium" ? (
+                    <Crown className="mr-1 h-3 w-3" />
+                  ) : null}
+                  {metricsBusiness.premiumPlan === "premium"
+                    ? "Premium"
+                    : "Sin premium"}
+                </Pill>
+                <Pill tone={statusTone(metricsBusiness.status)}>
+                  {statusLabel(metricsBusiness.status)}
+                </Pill>
+              </div>
+
+              <select
+                value={metricsRange}
+                onChange={(event) => setMetricsRange(Number(event.target.value))}
+                aria-label="Periodo de las métricas"
+                className="min-h-10 rounded-full border border-line bg-white px-3 text-xs font-semibold text-ink outline-none focus:border-accent/60"
+              >
+                <option value={7}>Últimos 7 días</option>
+                <option value={30}>Últimos 30 días</option>
+                <option value={90}>Últimos 90 días</option>
+              </select>
+            </div>
+
+            {metricsLoading ? (
+              <div className="rounded-2xl bg-soft p-6 text-center text-sm text-muted">
+                Cargando métricas…
+              </div>
+            ) : metricsError ? (
+              <div className="rounded-2xl bg-accent-tint p-4 text-sm text-accent">
+                {metricsError.message}
+              </div>
+            ) : metricsData ? (
+              <>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <MetricCard
+                    icon={Phone}
+                    label="Llamadas"
+                    value={metricsData.totals?.call}
+                  />
+                  <MetricCard
+                    icon={MessageCircle}
+                    label="Clics a WhatsApp"
+                    value={metricsData.totals?.whatsapp}
+                  />
+                  <MetricCard
+                    icon={Navigation}
+                    label="Cómo llegar"
+                    value={metricsData.totals?.directions}
+                  />
+                  <MetricCard
+                    icon={UtensilsCrossed}
+                    label="Vistas al menú"
+                    value={metricsData.totals?.menu_view}
+                  />
+                  <MetricCard
+                    icon={Share2}
+                    label="Negocio compartido"
+                    value={metricsData.totals?.business_share}
+                  />
+                  <MetricCard
+                    icon={Share2}
+                    label="Platos compartidos"
+                    value={metricsData.totals?.dish_share}
+                  />
+                </div>
+
+                <div className="rounded-2xl bg-soft p-4 text-xs leading-5 text-muted">
+                  <p>
+                    <span className="font-semibold text-ink">
+                      {metricsData.uniqueUsers ?? 0}
+                    </span>{" "}
+                    usuarios registrados y{" "}
+                    <span className="font-semibold text-ink">
+                      {metricsData.uniqueDevices ?? 0}
+                    </span>{" "}
+                    dispositivos únicos realizaron estas acciones.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    Platos más compartidos
+                  </p>
+                  {metricsData.topSharedDishes?.length ? (
+                    <div className="mt-2 overflow-hidden rounded-2xl border border-line bg-white">
+                      {metricsData.topSharedDishes.map((dish, index) => (
+                        <div
+                          key={dish.productId}
+                          className={`flex items-center gap-3 px-3 py-2.5 ${
+                            index > 0 ? "border-t border-line" : ""
+                          }`}
+                        >
+                          <span className="text-xl">{dish.emoji}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                            {dish.name}
+                          </span>
+                          <span className="text-xs font-semibold text-muted">
+                            {dish.shares}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted">
+                      Aún no hay platos compartidos en este periodo.
+                    </p>
+                  )}
+                </div>
+
+                <p className="text-[11px] leading-5 text-muted">
+                  Estas métricas son visibles solo desde el panel de
+                  administración.
+                </p>
+              </>
+            ) : null}
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }

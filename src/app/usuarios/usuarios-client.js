@@ -202,6 +202,9 @@ function UserRow({ user, index, onSelect, onToggleStatus }) {
 
       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         <Pill tone={roleTone(user.role)}>{roleShortLabel(user.role)}</Pill>
+        {user.authProvider === "google" ? (
+          <Pill tone="beige">Google</Pill>
+        ) : null}
         <Pill tone={statusTone(user.status)}>
           {statusLabel(user.status)}
         </Pill>
@@ -548,6 +551,9 @@ export default function UsersClient() {
               <Pill tone={statusTone(selectedUser.status)}>
                 {statusLabel(selectedUser.status)}
               </Pill>
+              {selectedUser.authProvider === "google" ? (
+                <Pill tone="beige">Google</Pill>
+              ) : null}
             </div>
 
             <div className="space-y-2 rounded-2xl bg-soft p-4 text-sm text-muted">
@@ -573,9 +579,24 @@ export default function UsersClient() {
                 </p>
               ) : null}
               <p className="flex items-start gap-2">
+                <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span className="min-w-0 text-ink">
+                  Acceso:{" "}
+                  {selectedUser.authProvider === "google"
+                    ? "Google"
+                    : "Correo y contraseña"}
+                </span>
+              </p>
+              <p className="flex items-start gap-2">
                 <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                 <span className="min-w-0 text-ink">
                   Creada el {formatDate(selectedUser.createdAt)}
+                </span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span className="min-w-0 text-ink">
+                  Último acceso: {formatDate(selectedUser.lastLoginAt)}
                 </span>
               </p>
             </div>
