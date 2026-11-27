@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Gift,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -19,6 +20,7 @@ const navigation = [
   { href: "/solicitudes", label: "Solicitudes", icon: Inbox },
   { href: "/negocios", label: "Negocios", icon: Store },
   { href: "/usuarios", label: "Usuarios", icon: Users },
+  { href: "/recompensas", label: "Recompensas", icon: Gift },
   { href: "/rankings", label: "Rankings", icon: Trophy },
 ];
 
