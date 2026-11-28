@@ -27,6 +27,8 @@ const statusFilters = [
   { id: "rejected", label: "Rechazados" },
 ];
 
+const adPositions = Array.from({ length: 10 }, (_, index) => index + 1);
+
 function statusTone(status) {
   if (status === "approved") return "open";
   if (status === "suspended" || status === "rejected") return "red";
@@ -294,6 +296,42 @@ export default function BusinessesClient() {
                 {business.recognition.productName}
               </p>
             ) : null}
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-white px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-ink">
+                  Publicidad en promociones
+                </p>
+                <p className="text-[10px] leading-4 text-muted">
+                  Aparece en “Promociones destacadas” del inicio.
+                </p>
+              </div>
+              <select
+                value={
+                  business.featuredAd?.isActive
+                    ? String(business.featuredAd.position || 1)
+                    : ""
+                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  updateBusiness(business, {
+                    featuredAd: {
+                      isActive: value !== "",
+                      position: value === "" ? 1 : Number(value),
+                    },
+                  });
+                }}
+                aria-label={`Publicidad de ${business.name} en promociones destacadas`}
+                className="min-h-9 shrink-0 rounded-full border border-line bg-white px-3 text-xs font-semibold text-ink outline-none focus:border-accent/60"
+              >
+                <option value="">No mostrar</option>
+                {adPositions.map((position) => (
+                  <option key={position} value={position}>
+                    Posición {position}
+                  </option>
+                ))}
+              </select>
+            </div>
           </article>
         ))}
       </div>
